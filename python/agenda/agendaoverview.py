@@ -9,6 +9,8 @@ from agenda import UIPATH
 from agenda.patient import PatientStore, Patient
 from agenda.misc import popupInfo
 
+from agenda.agendaentry import AgendaEntry
+
 class AgendaOverview(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -26,15 +28,36 @@ class AgendaOverview(QWidget):
         day = date.toPyDate()
         print(date, day)
         dayAppointments = self.patientStore.getDayAppointments(day)
-        
+
         weekendString = '' if day.weekday() <= 4 else ' (weekend)'
         dayList = "Appointments on {}{}:\n".format(day, weekendString)
+
+        self._clearDay()
+
         if dayAppointments:
             for app in dayAppointments:
                 appTime = "{:02d}:{:02d}".format(app.hour, app.minute)
+                appName = "{}".format(self.patientStore._appointmentCache[app])
                 dayList += "{} - {}\n".format(
-                    appTime, self.patientStore._appointmentCache[app])
+                    appTime, appName)
+                self._addEntry(appTime, appName)
         else:
-            dayList += "none\n"
+            self._addEntry('--:--', 'No appointments')
 
-        self.plainTextEdit.setPlainText(dayList)
+    def _clearDay(self):
+        layout = self.dayWidget.layout()
+
+        # Clear list of old day entries
+        while True:
+            oldItem = layout.takeAt(0)
+            if not oldItem:
+                break
+            oldItem.widget().setParent(None)
+            del oldItem
+
+    def _addEntry(self, time, text):
+        layout = self.dayWidget.layout()
+        entry = AgendaEntry(self.dayWidget)
+        entry.setText(text)
+        entry.setTime(time)
+        layout.addWidget(entry)
