@@ -2,7 +2,7 @@
 import datetime
 import logging
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal  #pylint: disable=no-name-in-module
 
 logger = logging.getLogger(__name__)
 
@@ -11,14 +11,11 @@ class Patient(QObject):
     MAXNOTELENGTH = 100
 
     sigInfoUpdated = pyqtSignal()
-    sigAppointmentsUpdated = pyqtSignal()
 
     def __init__(self, name=None, note=None):
         super().__init__()
         self._name = name
         self._note = note
-
-        self._appointments = []
 
     @property
     def name(self):
@@ -52,19 +49,6 @@ class Patient(QObject):
     def __repr__(self):
         return "<Patient: {!r}>".format(self.name)
 
-    def addAppointment(self, appointment):
-        self._appointments.append(appointment)
-        self.sigAppointmentsUpdated.emit()
-
-    def removeAppointment(self, appointment):
-        self._appointments.remove(appointment)
-        self.sigAppointmentsUpdated.emit()
-
-    @property
-    def appointments(self):
-        """ Read-only list of appointments """
-        return self._appointments
-
 
 class PatientStore(QObject):
     sigUpdated = pyqtSignal()
@@ -77,7 +61,7 @@ class PatientStore(QObject):
         super().__init__()
         self._patientList = []
 
-        self._appointmentCache = {}
+        self._appointments = {}
 
         self._createSampleData()
 
@@ -92,20 +76,20 @@ class PatientStore(QObject):
         self.addPatient(p3)
         self.addPatient(p4)
 
-        p1.addAppointment(datetime.datetime(2018, 5, 16, 14, 0))
-        p1.addAppointment(datetime.datetime(2018, 5, 17, 14, 0))
-        p2.addAppointment(datetime.datetime(2018, 5, 16, 15, 0))
-        p2.addAppointment(datetime.datetime(2018, 5, 17, 16, 0))
-        p3.addAppointment(datetime.datetime(2018, 5, 14, 15, 0))
+        self.addAppointment(p1, datetime.datetime(2018, 5, 16, 14, 0))
+        self.addAppointment(p1, datetime.datetime(2018, 5, 17, 14, 0))
+        self.addAppointment(p2, datetime.datetime(2018, 5, 16, 15, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 5, 17, 16, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 5, 14, 15, 0))
         p4slots = self.getDayAvailableTimeSlots(datetime.date(2018, 5, 22))
 
         for slot in p4slots:
-            p4.addAppointment(slot)
+            self.addAppointment(p4, slot)
 
         p3slots = self.getDayAvailableTimeSlots(datetime.date(2018, 5, 23))
 
         for slot in p3slots[:4]:
-            p3.addAppointment(slot)
+            self.addAppointment(p3, slot)
 
 
     @classmethod
@@ -131,18 +115,29 @@ class PatientStore(QObject):
         assert patient.name not in self.getPatientNames(), "Patient name must be unique"
         self._patientList.append(patient)
         patient.sigInfoUpdated.connect(self.sigUpdated)
-        patient.sigAppointmentsUpdated.connect(self._updateAppointmentCache)
         self.sigUpdated.emit()
 
     def getPatientNames(self):
         return sorted([patient.name for patient in self._patientList])
 
+    def addAppointment(self, patient, appointment):
+        assert appointment not in self._appointments.keys(), "Slot already booked"
+        self._appointments[appointment] = patient
+        print("added:", appointment, patient)
+
     def getDayAppointments(self, searchDay):
         """ Get list of appointments per day """
         assert isinstance(searchDay, datetime.date), \
             "Incorrect type: {}".format(type(searchDay))
-        return sorted([appointment for appointment in self._appointmentCache \
+        return sorted([(appointment, patient) for (appointment, patient) in self._appointments.items() \
                        if appointment.date()==searchDay])
+
+    def getPatientAppointments(self, searchPatient):
+        """ Read-only list of appointments """
+        assert isinstance(searchPatient, Patient), \
+            "Incorrect type: {}".format(type(searchPatient))
+        return sorted([appointment for (appointment, patient) in self._appointments.items() \
+                       if patient==searchPatient])
 
     def getDayAvailableTimeSlots(self, searchDay):
         dayAppointments = self.getDayAppointments(searchDay)
@@ -155,15 +150,3 @@ class PatientStore(QObject):
                 availableSlots.append(slotTime)
             slotTime += self.WORKINGHOURS_SLOT
         return availableSlots
-
-    def _updateAppointmentCache(self):
-        self._appointmentCache.clear()
-
-        for patient in self._patientList:
-            for appointment in patient.appointments:
-                assert appointment not in self._appointmentCache, \
-                    "Internal cache error (date '{}' booked twice? For {} and {})".format(
-                        appointment, self._appointmentCache[appointment], patient)
-                self._appointmentCache[appointment] = patient
-
-#         print ("appointment cache", self._appointmentCache)

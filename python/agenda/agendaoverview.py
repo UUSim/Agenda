@@ -1,13 +1,12 @@
 """ Widget with overview of calendar (month) and day planning side by side. """
 from datetime import date
 
-from PyQt5.QtWidgets import QListWidgetItem, QWidget
+from PyQt5.QtWidgets import QWidget  #pylint: disable=no-name-in-module
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSlot, QDate
+from PyQt5.QtCore import pyqtSlot, QDate  #pylint: disable=no-name-in-module
 
 from agenda import UIPATH
-from agenda.patient import PatientStore, Patient
-from agenda.misc import popupInfo
+from agenda.patient import PatientStore
 
 from agenda.agendaentry import AgendaEntry
 
@@ -24,9 +23,8 @@ class AgendaOverview(QWidget):
         self.calendarWidget.clicked.connect(self._selectDay)
 
     @pyqtSlot(QDate)
-    def _selectDay(self, date):
-        day = date.toPyDate()
-        print(date, day)
+    def _selectDay(self, day):
+        day = day.toPyDate()
         dayAppointments = self.patientStore.getDayAppointments(day)
 
         weekendString = '' if day.weekday() <= 4 else ' (weekend)'
@@ -35,9 +33,9 @@ class AgendaOverview(QWidget):
         self._clearDay()
 
         if dayAppointments:
-            for app in dayAppointments:
+            for app, patient in dayAppointments:
                 appTime = "{:02d}:{:02d}".format(app.hour, app.minute)
-                appName = "{}".format(self.patientStore._appointmentCache[app])
+                appName = "{}".format(patient)
                 dayList += "{} - {}\n".format(
                     appTime, appName)
                 self._addEntry(appTime, appName)

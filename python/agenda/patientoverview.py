@@ -1,8 +1,8 @@
 """ Overview widget with list of patients. """
 
-from PyQt5.QtWidgets import QListWidgetItem, QWidget
+from PyQt5.QtWidgets import QListWidgetItem, QWidget  #pylint: disable=no-name-in-module
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot  #pylint: disable=no-name-in-module
 
 from agenda import UIPATH
 from agenda.patient import PatientStore, Patient

@@ -6,6 +6,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot
 
 from agenda import UIPATH
 from agenda.misc import popupWarning, popupInfo
+from agenda.patient import PatientStore
 
 class PatientEditWidget(QWidget):
     sigBusy = pyqtSignal()
@@ -56,8 +57,9 @@ class PatientEditWidget(QWidget):
 
         #TODO: Fancy up appointment list
         appListText = "Appointments:\n"
-        if patient.appointments:
-            appListText += "\n".join([str(app) for app in patient.appointments])
+        patientAppointments = PatientStore.Instance().getPatientAppointments(patient)
+        if patientAppointments:
+            appListText += "\n".join([str(app) for app in patientAppointments])
         else:
             appListText += "none"
         self.appointmentListBox.setPlainText(appListText)
@@ -84,11 +86,11 @@ class PatientEditWidget(QWidget):
         except AssertionError as ex:
             popupWarning(ex)
             return
-            
+
         popupInfo("Patient information was updated successfully")
         self.sigSave.emit()
         self._clearPatient()
-        
+
     def _clearPatient(self):
         self._ui.name.clear()
         self._ui.textEdit.clear()
