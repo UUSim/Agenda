@@ -3,7 +3,7 @@
 
 import logging
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication  #pylint: disable=no-name-in-module
 from PyQt5 import uic
 
 from agenda import UIPATH

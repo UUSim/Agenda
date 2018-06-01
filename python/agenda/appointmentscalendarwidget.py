@@ -1,11 +1,9 @@
 """ QCalendarWidget-based month calendar with marked cells """
 
-from PyQt5.QtWidgets import QCalendarWidget
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtCore import QDate
+from PyQt5.QtWidgets import QCalendarWidget  #pylint: disable=no-name-in-module
+from PyQt5.QtGui import QColor, QPalette  #pylint: disable=no-name-in-module
 
 from agenda.patient import PatientStore
-# from PyQt5 import uic
 
 # from agenda import UIPATH
 
