@@ -53,41 +53,55 @@ class Patient(QObject):
 class PatientStore(QObject):
     sigUpdated = pyqtSignal()
 
-    WORKINGHOURS_START = datetime.time(13, 0)
-    WORKINGHOURS_END   = datetime.time(15, 0)
-    WORKINGHOURS_SLOT  = datetime.timedelta(minutes=50)
-
     def __init__(self):
         super().__init__()
         self._patientList = []
 
         self._appointments = {}
 
-        self._createSampleData()
+        # List of possible time slots which can be booked during a day
+        self._daySlots = [
+            datetime.time(9, 0),
+            datetime.time(10, 0),
+            datetime.time(11, 0),
+            datetime.time(12, 0),
+            datetime.time(14, 0),
+            datetime.time(15, 0),
+            datetime.time(16, 0),
+            datetime.time(17, 0),
+            ]
+
+        # Put some fake data in for demo
+        self._createSampleData() # TODO: Remove
 
     def _createSampleData(self):
         # Create sample data
+        p0 = Patient('Reserved',        'Patient for internal use (holidays etc)')
         p1 = Patient('Jan',             'test')
         p2 = Patient('Piet',            'test2')
         p3 = Patient('K. Laas',         'test3')
         p4 = Patient('V. Olgeboekt',    'test4')
+        self.addPatient(p0)
         self.addPatient(p1)
         self.addPatient(p2)
         self.addPatient(p3)
         self.addPatient(p4)
 
-        self.addAppointment(p1, datetime.datetime(2018, 5, 16, 14, 0))
-        self.addAppointment(p1, datetime.datetime(2018, 5, 17, 14, 0))
-        self.addAppointment(p2, datetime.datetime(2018, 5, 16, 15, 0))
-        self.addAppointment(p3, datetime.datetime(2018, 5, 17, 16, 0))
-        self.addAppointment(p3, datetime.datetime(2018, 5, 14, 15, 0))
-        p4slots = self.getDayAvailableTimeSlots(datetime.date(2018, 5, 22))
+        self.addAppointment(p1, datetime.datetime(2018, 6, 13, 14, 0))
+        self.addAppointment(p1, datetime.datetime(2018, 6, 14, 14, 0))
+        self.addAppointment(p2, datetime.datetime(2018, 6, 13, 15, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 6, 14, 16, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 6, 11, 15, 0))
 
-        for slot in p4slots:
+        # De,p day off
+        for slot in self.getDayAvailableTimeSlots(datetime.date(2018, 6, 29)):
+            self.addAppointment(p0, slot)
+
+        p4slots = self.getDayAvailableTimeSlots(datetime.date(2018, 6, 22))
+        for slot in p4slots[4:]:
             self.addAppointment(p4, slot)
 
-        p3slots = self.getDayAvailableTimeSlots(datetime.date(2018, 5, 23))
-
+        p3slots = self.getDayAvailableTimeSlots(datetime.date(2018, 6, 23))
         for slot in p3slots[:4]:
             self.addAppointment(p3, slot)
 
@@ -140,13 +154,11 @@ class PatientStore(QObject):
                        if patient==searchPatient])
 
     def getDayAvailableTimeSlots(self, searchDay):
-        dayAppointments = self.getDayAppointments(searchDay)
-        availableSlots = []
-        slotTime = datetime.datetime.combine(searchDay, self.WORKINGHOURS_START)
-        while slotTime < datetime.datetime.combine(searchDay, self.WORKINGHOURS_END):
-#             print ("Search", slotTime)
-            if slotTime not in dayAppointments:
-#                 print ("Search found", slotTime)
-                availableSlots.append(slotTime)
-            slotTime += self.WORKINGHOURS_SLOT
+        # Disable scheduling appointments during weekends
+        if searchDay.weekday() >= 5:
+            # Skip weekends (5, 6 -> sat, sun)
+            return []
+        dayAppointments = [slot.time() for (slot, _) in self.getDayAppointments(searchDay)]
+        availableSlots = [datetime.datetime.combine(searchDay, slot) \
+                          for slot in self._daySlots if slot not in dayAppointments]
         return availableSlots
