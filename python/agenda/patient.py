@@ -71,8 +71,12 @@ class PatientStore(QObject):
             datetime.time(17, 0),
             ]
 
+        # Remember selected patient, for gui actions # TODO: Move into GUI
+        self.activePatient = None
+
         # Put some fake data in for demo
         self._createSampleData() # TODO: Remove
+        self.activePatient = self._patientList[-1]
 
     def _createSampleData(self):
         # Create sample data
@@ -87,21 +91,21 @@ class PatientStore(QObject):
         self.addPatient(p3)
         self.addPatient(p4)
 
-        self.addAppointment(p1, datetime.datetime(2018, 6, 13, 14, 0))
-        self.addAppointment(p1, datetime.datetime(2018, 6, 14, 14, 0))
-        self.addAppointment(p2, datetime.datetime(2018, 6, 13, 15, 0))
-        self.addAppointment(p3, datetime.datetime(2018, 6, 14, 16, 0))
-        self.addAppointment(p3, datetime.datetime(2018, 6, 11, 15, 0))
+        self.addAppointment(p1, datetime.datetime(2018, 9, 25, 14, 0))
+        self.addAppointment(p1, datetime.datetime(2018, 9, 24, 14, 0))
+        self.addAppointment(p2, datetime.datetime(2018, 9, 25, 15, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 9, 24, 16, 0))
+        self.addAppointment(p3, datetime.datetime(2018, 9, 21, 15, 0))
 
         # De,p day off
-        for slot in self.getDayAvailableTimeSlots(datetime.date(2018, 6, 29)):
+        for slot in self.getDayAvailableTimeSlots(datetime.date(2018, 10, 1)):
             self.addAppointment(p0, slot)
 
-        p4slots = self.getDayAvailableTimeSlots(datetime.date(2018, 6, 22))
+        p4slots = self.getDayAvailableTimeSlots(datetime.date(2018, 10, 6))
         for slot in p4slots[4:]:
             self.addAppointment(p4, slot)
 
-        p3slots = self.getDayAvailableTimeSlots(datetime.date(2018, 6, 23))
+        p3slots = self.getDayAvailableTimeSlots(datetime.date(2018, 10, 5))
         for slot in p3slots[:4]:
             self.addAppointment(p3, slot)
 
@@ -135,9 +139,12 @@ class PatientStore(QObject):
         return sorted([patient.name for patient in self._patientList])
 
     def addAppointment(self, patient, appointment):
+        assert isinstance(appointment, datetime.datetime), \
+            "Illegal type: {}".format(type(appointment))
         assert appointment not in self._appointments.keys(), "Slot already booked"
         self._appointments[appointment] = patient
         print("added:", appointment, patient)
+        self.sigUpdated.emit()
 
     def getDayAppointments(self, searchDay):
         """ Get list of appointments per day """

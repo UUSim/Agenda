@@ -1,5 +1,5 @@
 """ Widget with overview of calendar (month) and day planning side by side. """
-from datetime import date
+from datetime import date, datetime
 
 from PyQt5.QtWidgets import QWidget  #pylint: disable=no-name-in-module
 from PyQt5 import uic
@@ -10,6 +10,7 @@ from agenda.patient import PatientStore
 
 from agenda.agendaentry import AgendaEntry
 from operator import itemgetter
+#from PyQt5.QtCore import QObject
 
 class AgendaOverview(QWidget):
     def __init__(self, *args, **kwargs):
@@ -17,21 +18,25 @@ class AgendaOverview(QWidget):
         self.ui = uic.loadUi(UIPATH + '/AgendaOverview.ui', self)
 
         self.patientStore = PatientStore.Instance()
+        self.day = date.today()
 
-        self._selectDay(QDate.currentDate())#date.today())
+        self.refreshDayOverview()
+        self.patientStore.sigUpdated.connect(self.refreshDayOverview)
 
         # Connect ui signals
         self.calendarWidget.clicked.connect(self._selectDay)
 
     @pyqtSlot(QDate)
     def _selectDay(self, day):
-        day = day.toPyDate()
-        dayAppointments = self.patientStore.getDayAppointments(day)
+        self.day = day.toPyDate()
+        self.refreshDayOverview()
 
+    def refreshDayOverview(self):
+        dayAppointments = self.patientStore.getDayAppointments(self.day)
         self._clearDay()
 
         # Populate day overview widget with list of appointments
-        daySlots = self.patientStore.getDayAvailableTimeSlots(day)
+        daySlots = self.patientStore.getDayAvailableTimeSlots(self.day)
         daySlots = [(slot, None) for slot in daySlots]
 
         if dayAppointments or daySlots:
@@ -40,9 +45,9 @@ class AgendaOverview(QWidget):
                     appName = "{}".format(patient)
                 else:
                     appName = '-- --'
-                self._addEntry(app.time(), appName)
+                self._addEntry(app.time(), appName, patient is None)
         else:
-            self._addEntry(None, 'Day not available')
+            self._addEntry(None, 'Day not available', False)
 
     def _clearDay(self):
         layout = self.dayWidget.layout()
@@ -55,9 +60,17 @@ class AgendaOverview(QWidget):
             oldItem.widget().setParent(None)
             del oldItem
 
-    def _addEntry(self, time, text):
+    def _addEntry(self, time, text, bookingEnabled=True):
         layout = self.dayWidget.layout()
         entry = AgendaEntry(self.dayWidget)
         entry.setText(text)
         entry.setTime(time)
+        entry.setEnableBooking(bookingEnabled)
+        entry.sigBookClicked.connect(self.slotBookEntry)
         layout.addWidget(entry)
+
+    @pyqtSlot()
+    def slotBookEntry(self):
+        entryTime = self.sender().time
+        appointment = datetime.combine(self.day, entryTime)
+        self.patientStore.addAppointment(self.patientStore.activePatient, appointment)
