@@ -2,13 +2,15 @@
 
 import datetime
 from PyQt5           import uic
-from PyQt5.QtCore    import pyqtSignal
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore    import pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QWidget, QMenu, QAction
 
 from agenda import UIPATH
 
 class AgendaEntry(QWidget):
-    sigBookClicked = pyqtSignal()
+    sigBookClicked   = pyqtSignal()
+    sigBlockClicked  = pyqtSignal()
+    sigCancelClicked = pyqtSignal()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -16,6 +18,18 @@ class AgendaEntry(QWidget):
         self.bookButton.clicked.connect(self.sigBookClicked)
 
         self.time = None
+        self.entryMenu = QMenu()
+        self.actionCancel = self.entryMenu.addAction("Cancel booking...")
+        self.actionCancel.triggered.connect(self.slotCancelClicked)
+
+        self.actionBlock  = self.entryMenu.addAction("Block...")
+        self.actionBlock.triggered.connect(self.sigBlockClicked)
+        self.optionsButton.setMenu(self.entryMenu)
+
+    @pyqtSlot()
+    def slotCancelClicked(self):
+        print("Cancel clicked") # TODO: Confirm cancellation
+        self.sigCancelClicked.emit()
 
     def setTime(self, entryTime):
         assert isinstance(entryTime, (type(None), datetime.time)), \
@@ -31,3 +45,5 @@ class AgendaEntry(QWidget):
 
     def setEnableBooking(self, enabled):
         self.bookButton.setEnabled(enabled)
+        self.actionCancel.setEnabled(not enabled and self.time is not None) # cancel appointment is inverse
+        self.actionBlock.setEnabled(enabled) # reserve follows enabled

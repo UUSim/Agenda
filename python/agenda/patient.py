@@ -146,6 +146,14 @@ class PatientStore(QObject):
         print("added:", appointment, patient)
         self.sigUpdated.emit()
 
+    def removeAppointment(self, appointment):
+        assert isinstance(appointment, datetime.datetime), \
+            "Illegal type: {}".format(type(appointment))
+        assert appointment in self._appointments.keys(), "Slot not booked"
+        print("deleted:", appointment, self._appointments[appointment])
+        del self._appointments[appointment]
+        self.sigUpdated.emit()
+
     def getDayAppointments(self, searchDay):
         """ Get list of appointments per day """
         assert isinstance(searchDay, datetime.date), \
